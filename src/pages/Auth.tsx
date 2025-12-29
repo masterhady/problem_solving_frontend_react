@@ -44,7 +44,7 @@ const Auth = () => {
     }
 
     try {
-      const res = await fetch("https://web-production-495dc.up.railway.app/api/auth/login/", {
+      const res = await fetch(`${import.meta.env.VITE_API_BASE || "https://web-production-495dc.up.railway.app/api"}/auth/login/`, {
         method: "POST",
         body: JSON.stringify(user),
         headers: {
@@ -115,7 +115,7 @@ const Auth = () => {
     };
 
     try {
-      const res = await fetch("https://web-production-495dc.up.railway.app/api/auth/register/", {
+      const res = await fetch(`${import.meta.env.VITE_API_BASE || "https://web-production-495dc.up.railway.app/api"}/auth/register/`, {
         method: "POST",
         body: JSON.stringify(registrationData),
         headers: {
