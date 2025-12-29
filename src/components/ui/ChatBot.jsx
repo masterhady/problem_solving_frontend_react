@@ -13,7 +13,8 @@ const ChatBot = ({ onClose }) => {
     setInput("");
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE || "https://web-production-495dc.up.railway.app/api"}/rag/search/`, {
+      const apiBase = import.meta.env.VITE_API_BASE || (import.meta.env.DEV ? "http://localhost:8000/api" : "https://web-production-495dc.up.railway.app/api");
+      const response = await fetch(`${apiBase}/rag/search/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

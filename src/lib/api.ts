@@ -1,4 +1,4 @@
-export const API_BASE = import.meta.env.VITE_API_BASE || "https://web-production-495dc.up.railway.app/api";
+export const API_BASE = import.meta.env.VITE_API_BASE || (import.meta.env.DEV ? "http://localhost:8000/api" : "https://web-production-495dc.up.railway.app/api");
 
 export function getAuthToken(): string | null {
   try {
