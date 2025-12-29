@@ -52,10 +52,17 @@ const Auth = () => {
         },
       });
 
-      const data = await res.json();
+      let data;
+      const contentType = res.headers.get("content-type");
+      if (contentType && contentType.includes("application/json")) {
+        data = await res.json();
+      } else {
+        const text = await res.text();
+        console.error("Non-JSON response received:", text);
+        throw new Error(`Server returned non-JSON response (${res.status}). Check console for details.`);
+      }
 
       if (!res.ok) {
-        // Assuming the backend sends error details in the 'detail' field
         throw new Error(data.detail || "Login failed!");
       }
 
@@ -123,7 +130,15 @@ const Auth = () => {
         },
       });
 
-      const data = await res.json();
+      let data;
+      const contentType = res.headers.get("content-type");
+      if (contentType && contentType.includes("application/json")) {
+        data = await res.json();
+      } else {
+        const text = await res.text();
+        console.error("Non-JSON response received:", text);
+        throw new Error(`Server returned non-JSON response (${res.status}). Check console for details.`);
+      }
 
       if (!res.ok) {
         let errorMessage = "Account creation failed!";
