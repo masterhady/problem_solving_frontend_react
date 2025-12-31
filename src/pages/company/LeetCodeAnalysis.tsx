@@ -26,9 +26,16 @@ import {
   ChevronUp
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { getAuthToken } from "@/lib/api";
 import { API_BASE } from "@/lib/api";
 import jsPDF from "jspdf";
+import { useEmployees } from "@/hooks/useEmployees";
 
 interface AnalysisResult {
   url: string;
@@ -114,11 +121,10 @@ const LeetCodeAnalysis = () => {
   const [targetRole, setTargetRole] = useState<string>("Mid-Level");
 
   // Employee selection
-  const [employees, setEmployees] = useState<Employee[]>([]);
   const [selectedEmployees, setSelectedEmployees] = useState<string[]>([]);
-  const [loadingEmployees, setLoadingEmployees] = useState(false);
   const [inputMode, setInputMode] = useState<"employees" | "manual">("employees");
   const [showEmployeeList, setShowEmployeeList] = useState(false);
+  const { data: employees = [], isLoading: loadingEmployees } = useEmployees();
 
   // Wrapper functions for filter changes
   const handleFilterMonthChange = (value: string) => {
@@ -127,32 +133,6 @@ const LeetCodeAnalysis = () => {
 
   const handleFilterYearChange = (value: string) => {
     setFilterYear(value);
-  };
-
-  // Fetch employees on component mount
-  useEffect(() => {
-    fetchEmployees();
-  }, []);
-
-  const fetchEmployees = async () => {
-    const token = getAuthToken();
-    if (!token) return;
-
-    try {
-      setLoadingEmployees(true);
-      const response = await fetch(`${API_BASE}/company/employees/`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setEmployees(data);
-      }
-    } catch (error) {
-      console.error("Error fetching employees:", error);
-    } finally {
-      setLoadingEmployees(false);
-    }
   };
 
   const handleEmployeeToggle = (employeeId: string) => {
@@ -1579,13 +1559,25 @@ const LeetCodeAnalysis = () => {
                                     <div key={key}>
                                       <div className="flex justify-between text-sm mb-1">
                                         <span className="flex items-center gap-1">
-                                          {comp.label}
+                                          <TooltipProvider>
+                                            <Tooltip>
+                                              <TooltipTrigger asChild>
+                                                <span className="cursor-help border-b border-dotted border-muted-foreground/50">
+                                                  {comp.label}
+                                                </span>
+                                              </TooltipTrigger>
+                                              <TooltipContent className="max-w-xs">
+                                                <p className="text-xs">
+                                                  {key === 'difficulty' && "Measures the balance of problems solved across Easy, Medium, and Hard levels."}
+                                                  {key === 'quality' && "Evaluates the efficiency and correctness of solutions."}
+                                                  {key === 'consistency' && "Tracks how regularly the user practices and their current streak."}
+                                                  {key === 'volume' && "Reflects total problems solved and global ranking."}
+                                                  {key === 'engagement' && "Measures interaction with the community and reputation."}
+                                                </p>
+                                              </TooltipContent>
+                                            </Tooltip>
+                                          </TooltipProvider>
                                           <span className="text-xs text-muted-foreground">({Math.round(comp.weight * 100)}%)</span>
-                                          {key === 'difficulty' && (
-                                            <span className="text-xs text-muted-foreground ml-1" title="Solving more medium and hard problems significantly increases this score.">
-                                              💡
-                                            </span>
-                                          )}
                                         </span>
                                         <span className="flex items-center gap-2">
                                           {key === 'engagement' && comp.score === 0 ? (
@@ -1612,9 +1604,6 @@ const LeetCodeAnalysis = () => {
                                       </div>
                                       <div className="text-xs text-muted-foreground mt-0.5">
                                         {comp.value}
-                                        {key === 'engagement' && comp.score === 0 && (
-                                          <span className="ml-1" title="Community engagement reflects discussions, solutions, and contributions on LeetCode.">ℹ️</span>
-                                        )}
                                       </div>
                                     </div>
                                   ))}

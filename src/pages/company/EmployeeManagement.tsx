@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { cn } from "@/lib/utils";
+import { useEmployees } from "@/hooks/useEmployees";
 import DashboardSidebar from "@/components/DashboardSidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -61,15 +63,14 @@ interface Employee {
 
 const EmployeeManagement = () => {
   const navigate = useNavigate();
-  const [employees, setEmployees] = useState<Employee[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [filterTeam, setFilterTeam] = useState<string>("all");
+  const { data: employees = [], isLoading: loading, refetch: fetchEmployees } = useEmployees(filterTeam);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isCsvDialogOpen, setIsCsvDialogOpen] = useState(false);
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [uploadingCsv, setUploadingCsv] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [syncingId, setSyncingId] = useState<string | null>(null);
-  const [filterTeam, setFilterTeam] = useState<string>("all");
 
   // Form state
   const [formData, setFormData] = useState({
@@ -90,40 +91,7 @@ const EmployeeManagement = () => {
       navigate("/Auth");
       return;
     }
-    fetchEmployees();
-  }, [navigate, filterTeam]);
-
-  const fetchEmployees = async () => {
-    const token = getAuthToken();
-    if (!token) {
-      toast.error("Please log in");
-      navigate("/Auth");
-      return;
-    }
-
-    try {
-      setLoading(true);
-      const url = filterTeam !== "all" 
-        ? `${API_BASE}/company/employees/?team=${filterTeam}`
-        : `${API_BASE}/company/employees/`;
-      
-      const response = await fetch(url, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setEmployees(data);
-      } else {
-        toast.error("Failed to fetch employees");
-      }
-    } catch (error) {
-      console.error("Error fetching employees:", error);
-      toast.error("Failed to fetch employees");
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -259,10 +227,10 @@ const EmployeeManagement = () => {
 
     // Try to detect delimiter (comma or semicolon)
     const delimiter = lines[0].includes(',') ? ',' : (lines[0].includes(';') ? ';' : ',');
-    
+
     // Parse header
     const headers = lines[0].split(delimiter).map(h => h.trim().toLowerCase().replace(/"/g, ''));
-    
+
     // Find column indices (flexible matching)
     const nameIndex = headers.findIndex(h => h.includes('name') || h.includes('employee name'));
     const emailIndex = headers.findIndex(h => h.includes('email'));
@@ -275,7 +243,7 @@ const EmployeeManagement = () => {
 
     for (let i = 1; i < lines.length; i++) {
       const values = lines[i].split(delimiter).map(v => v.trim().replace(/^"|"$/g, ''));
-      
+
       // Get LeetCode URL (required)
       let leetcodeUrl = '';
       if (leetcodeUrlIndex >= 0 && values[leetcodeUrlIndex]) {
@@ -325,7 +293,7 @@ const EmployeeManagement = () => {
 
     try {
       setUploadingCsv(true);
-      
+
       // Read CSV file
       const text = await csvFile.text();
       const employeesData = parseCSV(text);
@@ -379,7 +347,7 @@ const EmployeeManagement = () => {
 
       // Refresh employee list
       fetchEmployees();
-      
+
       // Reset and close dialog
       setCsvFile(null);
       setIsCsvDialogOpen(false);
@@ -419,217 +387,256 @@ const EmployeeManagement = () => {
                     Add Employee
                   </Button>
                 </DialogTrigger>
-              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>{editingEmployee ? "Edit Employee" : "Add New Employee"}</DialogTitle>
-                  <DialogDescription>
-                    Add an employee's LeetCode profile to track their problem-solving progress
-                  </DialogDescription>
-                </DialogHeader>
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="name">Name *</Label>
-                      <Input
-                        id="name"
-                        value={formData.name}
-                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                        required
-                      />
+                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle>{editingEmployee ? "Edit Employee" : "Add New Employee"}</DialogTitle>
+                    <DialogDescription>
+                      Add an employee's LeetCode profile to track their problem-solving progress
+                    </DialogDescription>
+                  </DialogHeader>
+                  <form onSubmit={handleSubmit} className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="name">Name *</Label>
+                        <Input
+                          id="name"
+                          value={formData.name}
+                          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                          required
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="email">Email</Label>
+                        <Input
+                          id="email"
+                          type="email"
+                          value={formData.email}
+                          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="employee_id">Employee ID</Label>
+                        <Input
+                          id="employee_id"
+                          value={formData.employee_id}
+                          onChange={(e) => setFormData({ ...formData, employee_id: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="leetcode_url">LeetCode URL *</Label>
+                        <Input
+                          id="leetcode_url"
+                          value={formData.leetcode_url}
+                          onChange={(e) => setFormData({ ...formData, leetcode_url: e.target.value })}
+                          placeholder="https://leetcode.com/u/username/"
+                          required
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="team">Team</Label>
+                        <Input
+                          id="team"
+                          value={formData.team}
+                          onChange={(e) => setFormData({ ...formData, team: e.target.value })}
+                          placeholder="Engineering, Product, etc."
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="role">Role</Label>
+                        <Input
+                          id="role"
+                          value={formData.role}
+                          onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                          placeholder="Software Engineer, etc."
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="sync_frequency">Sync Frequency</Label>
+                        <Select
+                          value={formData.sync_frequency}
+                          onValueChange={(value) => setFormData({ ...formData, sync_frequency: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="daily">Daily</SelectItem>
+                            <SelectItem value="weekly">Weekly</SelectItem>
+                            <SelectItem value="monthly">Monthly</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="flex items-center space-x-2 pt-8">
+                        <input
+                          type="checkbox"
+                          id="auto_sync"
+                          checked={formData.auto_sync_enabled}
+                          onChange={(e) => setFormData({ ...formData, auto_sync_enabled: e.target.checked })}
+                          className="rounded"
+                        />
+                        <Label htmlFor="auto_sync">Enable Auto-Sync</Label>
+                      </div>
                     </div>
                     <div>
-                      <Label htmlFor="email">Email</Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        value={formData.email}
-                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      <Label htmlFor="notes">Notes</Label>
+                      <Textarea
+                        id="notes"
+                        value={formData.notes}
+                        onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                        rows={3}
                       />
                     </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
+                    <DialogFooter>
+                      <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                        Cancel
+                      </Button>
+                      <Button type="submit" className="gradient-primary">
+                        {editingEmployee ? "Update" : "Add"} Employee
+                      </Button>
+                    </DialogFooter>
+                  </form>
+                </DialogContent>
+              </Dialog>
+
+              <Dialog open={isCsvDialogOpen} onOpenChange={(open) => {
+                setIsCsvDialogOpen(open);
+                if (!open) {
+                  setCsvFile(null);
+                }
+              }}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" onClick={() => setCsvFile(null)}>
+                    <Upload className="w-5 h-5 mr-2" />
+                    Upload CSV
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl">
+                  <DialogHeader>
+                    <DialogTitle>Upload Employees from CSV</DialogTitle>
+                    <DialogDescription>
+                      Upload a CSV file to add multiple employees at once. The CSV should include columns for name, email, LeetCode URL, team, and role.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4">
                     <div>
-                      <Label htmlFor="employee_id">Employee ID</Label>
-                      <Input
-                        id="employee_id"
-                        value={formData.employee_id}
-                        onChange={(e) => setFormData({ ...formData, employee_id: e.target.value })}
-                      />
+                      <div className="space-y-2">
+                        <Label htmlFor="csv_file" className="text-sm font-medium">
+                          Select CSV File
+                        </Label>
+                        <div
+                          className={cn(
+                            "border-2 border-dashed rounded-xl p-8 transition-all duration-200 flex flex-col items-center justify-center gap-3 cursor-pointer",
+                            csvFile
+                              ? "border-primary/50 bg-primary/5"
+                              : "border-muted-foreground/20 hover:border-primary/30 hover:bg-muted/50"
+                          )}
+                          onClick={() => document.getElementById('csv_file')?.click()}
+                        >
+                          <div className={cn(
+                            "w-12 h-12 rounded-full flex items-center justify-center transition-colors",
+                            csvFile ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                          )}>
+                            {csvFile ? <CheckCircle2 className="w-6 h-6" /> : <Upload className="w-6 h-6" />}
+                          </div>
+                          <div className="text-center">
+                            <p className="font-medium">
+                              {csvFile ? csvFile.name : "Click to upload or drag and drop"}
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {csvFile ? `${(csvFile.size / 1024).toFixed(1)} KB` : "CSV files only (max. 10MB)"}
+                            </p>
+                          </div>
+                          <input
+                            id="csv_file"
+                            type="file"
+                            accept=".csv"
+                            onChange={handleCsvFileChange}
+                            className="hidden"
+                          />
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                      <Label htmlFor="leetcode_url">LeetCode URL *</Label>
-                      <Input
-                        id="leetcode_url"
-                        value={formData.leetcode_url}
-                        onChange={(e) => setFormData({ ...formData, leetcode_url: e.target.value })}
-                        placeholder="https://leetcode.com/u/username/"
-                        required
-                      />
+
+                    <div className="space-y-6">
+                      <div className="space-y-4">
+                        <h4 className="font-bold text-lg">CSV Format:</h4>
+                        <p className="text-sm text-muted-foreground">
+                          Your CSV file should include the following columns (case-insensitive):
+                        </p>
+                        <ul className="text-sm text-muted-foreground space-y-2">
+                          <li className="flex items-center gap-2">
+                            <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/40" />
+                            <span><strong>Name</strong> or <strong>Employee Name</strong> (required)</span>
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/40" />
+                            <span><strong>Email</strong> (optional)</span>
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/40" />
+                            <span><strong>Employee ID</strong> or <strong>ID</strong> (optional)</span>
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/40" />
+                            <span><strong>LeetCode URL</strong> or <strong>LeetCode</strong> or <strong>URL</strong> (required)</span>
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/40" />
+                            <span><strong>Team</strong> or <strong>Department</strong> (optional)</span>
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/40" />
+                            <span><strong>Role</strong> or <strong>Title</strong> or <strong>Position</strong> (optional)</span>
+                          </li>
+                        </ul>
+                      </div>
+
+                      <div className="space-y-2">
+                        <p className="text-sm font-bold">Example:</p>
+                        <div className="bg-muted/30 p-4 rounded-lg border border-border/50 font-mono text-[11px] leading-relaxed overflow-x-auto">
+                          Name, Email, LeetCode URL, Team, Role<br />
+                          John Doe, john@company.com, https://leetcode.com/u/johndoe/, Engineering, Software Engineer<br />
+                          Jane Smith, jane@company.com, https://leetcode.com/u/janesmith/, Product, Product Manager
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="team">Team</Label>
-                      <Input
-                        id="team"
-                        value={formData.team}
-                        onChange={(e) => setFormData({ ...formData, team: e.target.value })}
-                        placeholder="Engineering, Product, etc."
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="role">Role</Label>
-                      <Input
-                        id="role"
-                        value={formData.role}
-                        onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                        placeholder="Software Engineer, etc."
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="sync_frequency">Sync Frequency</Label>
-                      <Select
-                        value={formData.sync_frequency}
-                        onValueChange={(value) => setFormData({ ...formData, sync_frequency: value })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="daily">Daily</SelectItem>
-                          <SelectItem value="weekly">Weekly</SelectItem>
-                          <SelectItem value="monthly">Monthly</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="flex items-center space-x-2 pt-8">
-                      <input
-                        type="checkbox"
-                        id="auto_sync"
-                        checked={formData.auto_sync_enabled}
-                        onChange={(e) => setFormData({ ...formData, auto_sync_enabled: e.target.checked })}
-                        className="rounded"
-                      />
-                      <Label htmlFor="auto_sync">Enable Auto-Sync</Label>
-                    </div>
-                  </div>
-                  <div>
-                    <Label htmlFor="notes">Notes</Label>
-                    <Textarea
-                      id="notes"
-                      value={formData.notes}
-                      onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                      rows={3}
-                    />
                   </div>
                   <DialogFooter>
-                    <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setIsCsvDialogOpen(false)}
+                      disabled={uploadingCsv}
+                    >
                       Cancel
                     </Button>
-                    <Button type="submit" className="gradient-primary">
-                      {editingEmployee ? "Update" : "Add"} Employee
+                    <Button
+                      type="button"
+                      className="bg-[#E87B94] hover:bg-[#D66A83] text-white"
+                      onClick={handleCsvUpload}
+                      disabled={!csvFile || uploadingCsv}
+                    >
+                      {uploadingCsv ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Uploading...
+                        </>
+                      ) : (
+                        <>
+                          <FileSpreadsheet className="w-4 h-4 mr-2" />
+                          Upload & Add Employees
+                        </>
+                      )}
                     </Button>
                   </DialogFooter>
-                </form>
-              </DialogContent>
-            </Dialog>
-
-            <Dialog open={isCsvDialogOpen} onOpenChange={(open) => {
-              setIsCsvDialogOpen(open);
-              if (!open) {
-                setCsvFile(null);
-              }
-            }}>
-              <DialogTrigger asChild>
-                <Button variant="outline" onClick={() => setCsvFile(null)}>
-                  <Upload className="w-5 h-5 mr-2" />
-                  Upload CSV
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-2xl">
-                <DialogHeader>
-                  <DialogTitle>Upload Employees from CSV</DialogTitle>
-                  <DialogDescription>
-                    Upload a CSV file to add multiple employees at once. The CSV should include columns for name, email, LeetCode URL, team, and role.
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="csv_file" className="text-base font-semibold mb-2 block">
-                      CSV File
-                    </Label>
-                    <div className="flex items-center gap-4">
-                      <Input
-                        id="csv_file"
-                        type="file"
-                        accept=".csv"
-                        onChange={handleCsvFileChange}
-                        className="flex-1"
-                      />
-                      {csvFile && (
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <CheckCircle2 className="w-4 h-4 text-green-500" />
-                          {csvFile.name}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="bg-secondary/20 p-4 rounded-lg">
-                    <h4 className="font-semibold mb-2">CSV Format:</h4>
-                    <p className="text-sm text-muted-foreground mb-2">
-                      Your CSV file should include the following columns (case-insensitive):
-                    </p>
-                    <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
-                      <li><strong>Name</strong> or <strong>Employee Name</strong> (required)</li>
-                      <li><strong>Email</strong> (optional)</li>
-                      <li><strong>Employee ID</strong> or <strong>ID</strong> (optional)</li>
-                      <li><strong>LeetCode URL</strong> or <strong>LeetCode</strong> or <strong>URL</strong> (required)</li>
-                      <li><strong>Team</strong> or <strong>Department</strong> (optional)</li>
-                      <li><strong>Role</strong> or <strong>Title</strong> or <strong>Position</strong> (optional)</li>
-                    </ul>
-                    <p className="text-sm text-muted-foreground mt-3">
-                      <strong>Example:</strong>
-                    </p>
-                    <pre className="text-xs bg-background p-2 rounded mt-2 overflow-x-auto">
-{`Name,Email,LeetCode URL,Team,Role
-John Doe,john@company.com,https://leetcode.com/u/johndoe/,Engineering,Software Engineer
-Jane Smith,jane@company.com,https://leetcode.com/u/janesmith/,Product,Product Manager`}
-                    </pre>
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setIsCsvDialogOpen(false)}
-                    disabled={uploadingCsv}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="button"
-                    className="gradient-primary"
-                    onClick={handleCsvUpload}
-                    disabled={!csvFile || uploadingCsv}
-                  >
-                    {uploadingCsv ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Uploading...
-                      </>
-                    ) : (
-                      <>
-                        <FileSpreadsheet className="w-4 h-4 mr-2" />
-                        Upload & Add Employees
-                      </>
-                    )}
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
+                </DialogContent>
+              </Dialog>
             </div>
           </div>
 
@@ -648,7 +655,7 @@ Jane Smith,jane@company.com,https://leetcode.com/u/janesmith/,Product,Product Ma
                 ))}
               </SelectContent>
             </Select>
-            <Button variant="outline" onClick={fetchEmployees}>
+            <Button variant="outline" onClick={() => fetchEmployees()}>
               <RefreshCw className="w-4 h-4 mr-2" />
               Refresh
             </Button>

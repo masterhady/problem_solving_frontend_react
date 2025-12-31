@@ -12,6 +12,7 @@ import EmployeeManagement from "./pages/company/EmployeeManagement";
 import EmployeeProgress from "./pages/company/EmployeeProgress";
 import KPIDashboard from "./pages/company/KPIDashboard";
 import EmployeeGoals from "./pages/company/EmployeeGoals";
+import Glossary from "./pages/company/Glossary";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 import LogoutAction from "./pages/logout";
@@ -39,6 +40,7 @@ const App = () => (
             <Route path="/company/employees/:employeeId/progress" element={<EmployeeProgress />} />
             <Route path="/company/kpi-dashboard" element={<KPIDashboard />} />
             <Route path="/company/goals" element={<EmployeeGoals />} />
+            <Route path="/company/glossary" element={<Glossary />} />
             <Route path="/company/settings" element={<Settings />} />
           </Route>
 

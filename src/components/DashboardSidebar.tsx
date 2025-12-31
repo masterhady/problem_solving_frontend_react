@@ -32,12 +32,13 @@ const DashboardSidebar = ({ type }: DashboardSidebarProps) => {
   const location = useLocation();
 
   const companyItems = [
-    { to: "/company/dashboard", icon: <LayoutDashboard className="w-5 h-5" />, label: "Dashboard" },
+    { to: "/company/employees", icon: <Users className="w-5 h-5" />, label: "Employee Management" },
     { to: "/company/leetcode-analysis", icon: <Code className="w-5 h-5" />, label: "LeetCode Analysis" },
     { to: "/company/leetcode-report", icon: <BarChart3 className="w-5 h-5" />, label: "LeetCode Report" },
-    { to: "/company/employees", icon: <Users className="w-5 h-5" />, label: "Employee Management" },
     { to: "/company/kpi-dashboard", icon: <Activity className="w-5 h-5" />, label: "KPI Dashboard" },
     { to: "/company/goals", icon: <Award className="w-5 h-5" />, label: "Goals" },
+    { to: "/company/dashboard", icon: <LayoutDashboard className="w-5 h-5" />, label: "Dashboard" },
+    { to: "/company/glossary", icon: <FileText className="w-5 h-5" />, label: "Glossary" },
     { to: "/company/settings", icon: <Settings className="w-5 h-5" />, label: "Settings" },
     { to: "/logout", icon: <LogOut className="w-5 h-5" />, label: "Logout" },
   ];
